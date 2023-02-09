@@ -21,6 +21,7 @@ class CFG:
     target = 'target'
     boosting_type = 'dart'
     metric = 'binary_logloss'
+    num_boost_round = 10500
 
 
 # ====================================================
@@ -119,7 +120,7 @@ def train_and_evaluate(model_wrapper, train):
         model = lgb.train(
             params=model_wrapper.params,
             train_set=lgb_train,
-            num_boost_round=500,#10500,
+            num_boost_round=model_wrapper.num_boost_round,
             valid_sets=[lgb_train, lgb_valid],
             early_stopping_rounds=1500,
             verbose_eval=500,
