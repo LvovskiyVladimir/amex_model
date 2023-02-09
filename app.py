@@ -1,7 +1,7 @@
 from flask import Flask
 from flask_restx import Resource, Api, reqparse, fields
 
-from model import Model
+from model import ModelWrapper
 
 MAX_MODEL_NUM = 10
 MODELS_DICT = dict()
@@ -9,6 +9,7 @@ MODELS_DICT = dict()
 app = Flask(__name__)
 app.config["BUNDLE_ERRORS"] = True
 api = Api(app)
+
 
 model_add = api.model(
     "Model.add.input", {
@@ -18,31 +19,22 @@ model_add = api.model(
             title="Model name",
             description="Used as a key in local models storage; Must be unique;"
         ),
-        "type":
-        fields.String(required=True,
-                      title="Model type",
-                      default='lgb',
-                      description="only lgb"),
-        # "objective":
-        #         fields.String(
-        #             required=True,
-        #             title="objective",
-        #             description="binary",
-        #             default="binary"),
-        #
-        # "metric":
-        #         fields.String(
-        #             required=True,
-        #             title="objective",
-        #             description="binary",
-        #             default="binary_logloss"),
-        #
-        # "boosting type":
-        #         fields.String(
-        #             required=True,
-        #             title="boosting type",
-        #             description="dart",
-        #             default="binary_logloss")
+        "n_cv_fold":
+        fields.Integer(required=True,
+                      title="Number of cross-validation folds",
+                      default='5'),
+        "num_boost_round":
+                fields.Integer(
+                    required=True,
+                    title="Number of boosting rounds",
+                    default=10500),
+        "boosting_type":
+                fields.String(
+                            required=True,
+                            title="Boosting type",
+                            default='dart',
+                            description="gbdt or dart or rf"
+                        )
     })
 
 model_predict = api.model(
@@ -129,17 +121,9 @@ class ModelAdd(Resource):
         })
     def post(self):
         __name = api.payload["name"]
-        __type = api.payload["type"]
-        #__params = api.payload["params"]
-
-        # try:
-        #     __params = eval(__params)
-        # except Exception as e:
-        #     return {
-        #         "status": "Failed",
-        #         "message":
-        #         "'params' error; Params must be a valid json or dict"
-        #     }, 401
+        __n_cv_fold = api.payload["n_cv_fold"]
+        __num_boost_round = api.payload["num_boost_round"]
+        __boosting_type = api.payload["boosting_type"]
 
         if len(MODELS_DICT) >= MAX_MODEL_NUM:
             return {
@@ -151,7 +135,7 @@ class ModelAdd(Resource):
 
         if __name not in MODELS_DICT.keys():
             try:
-                MODELS_DICT[__name] = Model(__type)
+                MODELS_DICT[__name] = ModelWrapper(__name, __n_cv_fold, __num_boost_round, __boosting_type)
                 return {"status": "OK", "message": "Model created!"}, 201
             except Exception as e:
                 return {
